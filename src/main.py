@@ -31,7 +31,7 @@ class Dobot:
             return None
 
         try:
-            self.device = pydobot.Dobot(port=port, verbose=True)
+            self.device = pydobot.Dobot(port=port)
             print("Conectado ao dobot com sucesso.")
         except Exception as e:
             print("Falha ao conectar ao robô:" + str({e}))
@@ -71,7 +71,8 @@ class Dobot:
             try:
                 db = self.conectar_DB()
                 Posicao = Query()
-                posicao = db.search(Posicao.nomePosicao == nomePosicao['Pontos'])  # Busca no banco de dados
+                nome_da_posicao = nomePosicao['Pontos'] if isinstance(nomePosicao, dict) else nomePosicao
+                posicao = db.search(Posicao.nomePosicao == nome_da_posicao)  # Busca no banco de dados
                 if posicao:
                     x = posicao[0]['x']
                     y = posicao[0]['y']
@@ -97,9 +98,10 @@ class Dobot:
                 #     ]
                 for comando in comandos:
                     if comando['tipo'] == 'ponto':
+                        print(comando['nome'])
                         self.mover_para_ponto(comando['nome'])
                     elif comando['tipo'] == 'atuador':
-                        if comando['estado'] == 'on':
+                        if comando['estado'] == 'On':
                             self.device.suck(True)
                         else:
                             self.device.suck(False)
@@ -130,7 +132,7 @@ class Dobot:
         if self.device:
 
             while continuar:
-                options = [ inquirer.list("Movimentacao", message="Em qual eixo deseja mover?", choices=["X", "Y", "Z", "R", 'Sair']) ]
+                options = [ inquirer.List("Movimentacao", message="Em qual eixo deseja mover?", choices=["X", "Y", "Z", "R", 'Sair']) ]
                 
                 resposta = inquirer.prompt(options)
                 resposta = resposta["Movimentacao"]
@@ -213,7 +215,7 @@ class Dobot:
                 case "Mover para":
 
                     opcoes = [
-                    inquirer.List("Tipo de movimento", message="Mover para:", choices=["Localizacao espesifica", "Pontos pre determinados", 'Salvar Ponto', "Sequencia de movimentos","Movimentacao Livre", "Home"])
+                    inquirer.List("Tipo de movimento", message="Mover para:", choices=["Localizacao espesifica", "Pontos pre determinados", 'Salvar Ponto', "Sequencia de movimentos","Movimentacao Livre", "Home", 'Voltar menu'])
                     ]
                     
                     resposta = inquirer.prompt(opcoes)
@@ -286,11 +288,13 @@ class Dobot:
                             self.movimentacao_livre()
                         case "Home":
                             self.mover_para(243, 0, 151, 0)
+                        case 'Voltar menu':
+                            self.CLI()
                         case _:
                             print("Comando invalido.")
 
                 case "Atuador":
-                    self.atuador(dobot_conectado)
+                    self.atuador()
 
                 case "Posição Atual":
                     if self.device:
@@ -298,8 +302,8 @@ class Dobot:
                     else:
                         print("Conecte ao dobot primeiro.")
                 case "Sair":
-                    self.desconectar_robot(dobot_conectado)
-                    print("Siando do programa")
+                    self.desconectar_robot()
+                    print("Saindo do programa")
                     break
                 case _:
                     print("Comando invalido.")
