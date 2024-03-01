@@ -190,71 +190,73 @@ class Dobot:
                     resposta = inquirer.prompt(opcoes)
                     resposta = resposta["Tipo de movimento"]
 
-                    if resposta == "Localizacao espesifica":
-                        x = float(input("X:"))
-                        y = float(input("Y:"))
-                        z = float(input("Z:"))
-                        r = float(input("R:"))
-                        self.mover_para(x, y, z, r)
-                    elif resposta == "Pontos pre determinados":
-                        db = self.conectar_DB()
-                        Posicao = Query()  # Instanciar Query
-                        posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
+                    match resposta:
 
-                        opcoes = [
-                            inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
-                        ]
+                        case "Localizacao espesifica":
+                            x = float(input("X:"))
+                            y = float(input("Y:"))
+                            z = float(input("Z:"))
+                            r = float(input("R:"))
+                            self.mover_para(x, y, z, r)
+                        case "Pontos pre determinados":
+                            db = self.conectar_DB()
+                            Posicao = Query()  # Instanciar Query
+                            posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
 
-                        resposta = inquirer.prompt(opcoes)
-                        self.mover_para_ponto(resposta)
-
-                    elif resposta == "Salvar Ponto":
-                        nomePosicao = input("Digite o nome da posição: ")
-                        self.salvar_posicao(nomePosicao)
-                    elif resposta == "Sequencia de movimentos":
-                        comandos = []
-                        continuar = True
-                        while continuar:
                             opcoes = [
-                                inquirer.List("Tipo de movimento", message="Mover para:", choices=["Ponto", "Atuador", "Sair"])
+                                inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
                             ]
+
                             resposta = inquirer.prompt(opcoes)
-                            resposta = resposta["Tipo de movimento"]
+                            self.mover_para_ponto(resposta)
 
-                            if resposta == "Ponto":
-                                db = self.conectar_DB()
-                                Posicao = Query()  # Instanciar Query
-                                posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
-
+                        case "Salvar Ponto":
+                            nomePosicao = input("Digite o nome da posição: ")
+                            self.salvar_posicao(nomePosicao)
+                        case "Sequencia de movimentos":
+                            comandos = []
+                            continuar = True
+                            while continuar:
                                 opcoes = [
-                                    inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
+                                    inquirer.List("Tipo de movimento", message="Mover para:", choices=["Ponto", "Atuador", "Sair"])
                                 ]
-
                                 resposta = inquirer.prompt(opcoes)
-                                resposta = resposta["Pontos"]
-                                comandos.append({'tipo': 'ponto', 'nome': resposta})
-                            elif resposta == "Atuador":
-                                opcoesAcao = [
-                                    inquirer.List("Ação", message="Qual ação deseja realizar?", choices=["suck", "grip"])
-                                ]
-                                
-                                respostaAcao = inquirer.prompt(opcoesAcao)
-                                respostaAcao = respostaAcao["Ação"]
+                                resposta = resposta["Tipo de movimento"]
 
-                                opcoesEstado = [
-                                inquirer.List("Estado", message="Ligar ou Desligar?", choices=["On", "off"])
-                                ]
+                                if resposta == "Ponto":
+                                    db = self.conectar_DB()
+                                    Posicao = Query()  # Instanciar Query
+                                    posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
 
-                                respostaEstado = inquirer.prompt(opcoesEstado)
-                                respostaEstado = respostaEstado["Estado"]
-                                comandos.append({'tipo': 'atuador', 'estado': respostaEstado})
-                            else:
-                                continuar = False
-                        self.sequencia_de_movimentos(comandos)
-                    elif resposta == "Home":
-                        self.mover_para(243, 0, 151, 0)
-                    else:
-                        print("Please connect to Dobot first.")
+                                    opcoes = [
+                                        inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
+                                    ]
+
+                                    resposta = inquirer.prompt(opcoes)
+                                    resposta = resposta["Pontos"]
+                                    comandos.append({'tipo': 'ponto', 'nome': resposta})
+                                elif resposta == "Atuador":
+                                    opcoesAcao = [
+                                        inquirer.List("Ação", message="Qual ação deseja realizar?", choices=["suck", "grip"])
+                                    ]
+                                    
+                                    respostaAcao = inquirer.prompt(opcoesAcao)
+                                    respostaAcao = respostaAcao["Ação"]
+
+                                    opcoesEstado = [
+                                    inquirer.List("Estado", message="Ligar ou Desligar?", choices=["On", "off"])
+                                    ]
+
+                                    respostaEstado = inquirer.prompt(opcoesEstado)
+                                    respostaEstado = respostaEstado["Estado"]
+                                    comandos.append({'tipo': 'atuador', 'estado': respostaEstado})
+                                else:
+                                    continuar = False
+                            self.sequencia_de_movimentos(comandos)
+                        case "Home":
+                            self.mover_para(243, 0, 151, 0)
+                        case _:
+                            print("Comando invalido.")
 
                 case "Atuador":
                     self.atuador(dobot_conectado)
