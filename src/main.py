@@ -4,12 +4,14 @@ import time, inquirer, typer
 from yaspin import yaspin
 from tinydb import TinyDB, Query
 
-
+# Classe do Dobot
 class Dobot:
     def __init__(self) -> None:
         pass
 
+    # Função para conectar ao dobot
     def conectar_dobot(self):
+        # Dar a opção de escolher a porta de conexão
         portas_disponiveis = list_ports.comports()
 
         portas = [x.device for x in portas_disponiveis]
@@ -31,22 +33,28 @@ class Dobot:
             return None
 
         try:
+            # Incializar o dobot
             self.device = pydobot.Dobot(port=port)
             print("Conectado ao dobot com sucesso.")
         except Exception as e:
             print("Falha ao conectar ao robô:" + str({e}))
     
+    # Função de conexão com banco de dados TinyDB
     def conectar_DB(self):
         db = TinyDB('db.json', indent=4)
         return db
 
+    # Função para desconectar do banco de dados
     def desconectar_DB(self, db):
         db.close()
 
+    # Função para salvar a posição atual do dobot
     def salvar_posicao(self, nomePosicao):
+        # Instanciar o banco de dados
         db = self.conectar_DB()
         if self.device:
             try:
+                # Pegar a posição atual do dobot e inserir no banco de dados
                 posicao = self.device.pose()
 
                 db.insert({'nomePosicao': nomePosicao, 'x': posicao[0], 'y': posicao[1], 'z': posicao[2], 'r': posicao[3]})
@@ -56,6 +64,7 @@ class Dobot:
         else:
             print('Conecte ao dobot primeiro.')
     
+    # Função para desconectar do dobot
     def desconectar_robot(self):
         if self.device:
             try:
@@ -66,18 +75,22 @@ class Dobot:
         else:
             print("Não há conexão com o dobot.")
 
+    # Função para mover o dobot para uma posição salva
     def mover_para_ponto(self, nomePosicao):
         if self.device:
             try:
+                # Conectar ao banco de dados
                 db = self.conectar_DB()
+                # Instanciar a Query
                 Posicao = Query()
                 nome_da_posicao = nomePosicao['Pontos'] if isinstance(nomePosicao, dict) else nomePosicao
-                posicao = db.search(Posicao.nomePosicao == nome_da_posicao)  # Busca no banco de dados
+                posicao = db.search(Posicao.nomePosicao == nome_da_posicao)  # Busca no banco de dados o nome itens com o nome da posição
                 if posicao:
                     x = posicao[0]['x']
                     y = posicao[0]['y']
                     z = posicao[0]['z']
                     r = posicao[0]['r']
+                    # Mover o dobot para a posição
                     self.device.move_to(x, y, z, r, wait=True)
                 else:
                     print("Posição não encontrada.")
@@ -87,6 +100,7 @@ class Dobot:
         else:
             print("Conecte ao dobot primeiro.")
 
+    # Função para executar uma sequencia de movimentos
     def sequencia_de_movimentos(self, comandos):
         print(comandos)
         if self.device:
@@ -96,7 +110,10 @@ class Dobot:
                 #     {'tipo': 'ponto', 'nome': 'ponto1'},
                 #     {'tipo': 'atuador', 'estado': 'on'}
                 #     ]
+                
+                # Interar nos comandos escolhidos
                 for comando in comandos:
+                    # Executar cada tipo de comando
                     if comando['tipo'] == 'ponto':
                         print(comando['nome'])
                         self.mover_para_ponto(comando['nome'])
@@ -110,12 +127,15 @@ class Dobot:
         else:
             print("Conecte ao dobot primeiro.")
 
+    # Função para mover o dobot para uma posição especifica
     def mover_para(self, x, y, z, r):
         if self.device:
             try:
+                # Inicializar o spinner
                 spiner = yaspin(text="Movendo o braço robotico...", color="yellow")
 
                 spiner.start()
+                # Mover o dobot para a posição
                 self.device.move_to(x, y, z, r, wait=True)
 
                 spiner.stop()
@@ -127,10 +147,12 @@ class Dobot:
         else:
             print("Conecte ao dobot primeiro.")
 
+    # Controle de movimentação livre
     def movimentacao_livre(self):
         continuar = True
         if self.device:
-
+            
+            # POssibilidade de mover o dobot em qualquer eixo
             while continuar:
                 options = [ inquirer.List("Movimentacao", message="Em qual eixo deseja mover?", choices=["X", "Y", "Z", "R", 'Sair']) ]
                 
@@ -138,7 +160,8 @@ class Dobot:
                 resposta = resposta["Movimentacao"]
 
                 posicaoAtual = self.device.pose()
-
+                
+                # Mover o dobot no eixo escolhido e a taxa de movimentação
                 if resposta == "X":
                     taxaX = float(input("Quanto deseja mover em X?"))
                     self.device.move_to(posicaoAtual[0]+taxaX, posicaoAtual[1], posicaoAtual[2], posicaoAtual[3], wait=True)
@@ -156,6 +179,7 @@ class Dobot:
         else:
             print("Conecte ao dobot primeiro.")
 
+    # Função para controlar o atuador
     def atuador(self):
         opcoesAcao = [
             inquirer.List("Ação", message="Qual ação deseja realizar?", choices=["suck", "grip"])
@@ -171,6 +195,7 @@ class Dobot:
         respostaEstado = inquirer.prompt(opcoesEstado)
         respostaEstado = respostaEstado["Estado"]
 
+        # Ligar ou desligar o suck ou grip
         if self.device:
             try:
                 if respostaAcao == "suck":
@@ -186,6 +211,7 @@ class Dobot:
             except Exception as e:
                 print("Erro na ação:" + str({e}))
 
+    # Função principal para controlar o dobot pela CLI
     def CLI(self):
         dobot_conectado = None
         continuar_prorgama = True
@@ -193,7 +219,8 @@ class Dobot:
         # incializar_programa()
 
         while continuar_prorgama:
-
+            
+            # Oferecer as opções de comandos
             opcoes = [
                 inquirer.List("Comando", message="Qual comando deseja realizar?", choices=["Conectar", "Disconectar", "Mover para","Atuador", "Posição Atual", "Sair"])
                 ]
@@ -214,6 +241,7 @@ class Dobot:
                 
                 case "Mover para":
 
+                    # Ofercer as opções de movimentação
                     opcoes = [
                     inquirer.List("Tipo de movimento", message="Mover para:", choices=["Localizacao espesifica", "Pontos pre determinados", 'Salvar Ponto', "Sequencia de movimentos","Movimentacao Livre", "Home", 'Voltar menu'])
                     ]
@@ -230,10 +258,12 @@ class Dobot:
                             r = float(input("R:"))
                             self.mover_para(x, y, z, r)
                         case "Pontos pre determinados":
+                            # Conectar ao banco de dados
                             db = self.conectar_DB()
                             Posicao = Query()  # Instanciar Query
                             posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
 
+                            # Dar a opção do usuário escolher qual posição salva
                             opcoes = [
                                 inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
                             ]
@@ -247,6 +277,8 @@ class Dobot:
                         case "Sequencia de movimentos":
                             comandos = []
                             continuar = True
+
+                            # Oferecer número ilimitado de comandos
                             while continuar:
                                 opcoes = [
                                     inquirer.List("Tipo de movimento", message="Mover para:", choices=["Ponto", "Atuador", "Sair"])
@@ -254,11 +286,13 @@ class Dobot:
                                 resposta = inquirer.prompt(opcoes)
                                 resposta = resposta["Tipo de movimento"]
 
+                                # Adicionar cada resposta a lista de comandos para enviar para a função
                                 if resposta == "Ponto":
                                     db = self.conectar_DB()
                                     Posicao = Query()  # Instanciar Query
                                     posicoes = db.search(Posicao.nomePosicao.exists())  # Buscar todas as posições
-
+                                    
+                                    # Oferecer a opção de escolher um ponto salvo
                                     opcoes = [
                                         inquirer.List("Pontos", message="Para qual ponto mover o robo?:", choices=[p['nomePosicao'] for p in posicoes])
                                     ]
@@ -287,6 +321,7 @@ class Dobot:
                         case "Movimentacao Livre":
                             self.movimentacao_livre()
                         case "Home":
+                            # Coordenados para a posição home
                             self.mover_para(243, 0, 151, 0)
                         case 'Voltar menu':
                             self.CLI()
@@ -310,5 +345,6 @@ class Dobot:
 
             # continuar_prorgama = typer.confirm("Deseja continuar?") 
 
+# Inicializar uma instacncia da classe dobot
 meuRobo = Dobot()
 meuRobo.CLI()
