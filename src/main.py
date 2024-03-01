@@ -125,6 +125,35 @@ class Dobot:
         else:
             print("Conecte ao dobot primeiro.")
 
+    def movimentacao_livre(self):
+        continuar = True
+        if self.device:
+
+            while continuar:
+                options = [ inquirer.list("Movimentacao", message="Em qual eixo deseja mover?", choices=["X", "Y", "Z", "R", 'Sair']) ]
+                
+                resposta = inquirer.prompt(options)
+                resposta = resposta["Movimentacao"]
+
+                posicaoAtual = self.device.pose()
+
+                if resposta == "X":
+                    taxaX = float(input("Quanto deseja mover em X?"))
+                    self.device.move_to(posicaoAtual[0]+taxaX, posicaoAtual[1], posicaoAtual[2], posicaoAtual[3], wait=True)
+                elif resposta == "Y":
+                    taxaY = float(input("Quanto deseja mover em Y?"))
+                    self.device.move_to(posicaoAtual[0], posicaoAtual[1]+taxaY, posicaoAtual[2], posicaoAtual[3], wait=True)
+                elif resposta == "Z":
+                    taxaZ = float(input("Quanto deseja mover em Z?"))
+                    self.device.move_to(posicaoAtual[0], posicaoAtual[1], posicaoAtual[2]+taxaZ, posicaoAtual[3], wait=True)
+                elif resposta == "R":
+                    taxaR = float(input("Quanto deseja mover em R?"))
+                    self.device.move_to(posicaoAtual[0], posicaoAtual[1], posicaoAtual[2], posicaoAtual[3]+taxaR, wait=True)
+                elif resposta == 'Sair':
+                    continuar = False
+        else:
+            print("Conecte ao dobot primeiro.")
+
     def atuador(self):
         opcoesAcao = [
             inquirer.List("Ação", message="Qual ação deseja realizar?", choices=["suck", "grip"])
@@ -184,7 +213,7 @@ class Dobot:
                 case "Mover para":
 
                     opcoes = [
-                    inquirer.List("Tipo de movimento", message="Mover para:", choices=["Localizacao espesifica", "Pontos pre determinados", 'Salvar Ponto', "Home", "Sequencia de movimentos"])
+                    inquirer.List("Tipo de movimento", message="Mover para:", choices=["Localizacao espesifica", "Pontos pre determinados", 'Salvar Ponto', "Sequencia de movimentos","Movimentacao Livre", "Home"])
                     ]
                     
                     resposta = inquirer.prompt(opcoes)
@@ -253,6 +282,8 @@ class Dobot:
                                 else:
                                     continuar = False
                             self.sequencia_de_movimentos(comandos)
+                        case "Movimentacao Livre":
+                            self.movimentacao_livre()
                         case "Home":
                             self.mover_para(243, 0, 151, 0)
                         case _:
